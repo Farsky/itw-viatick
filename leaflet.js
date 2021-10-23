@@ -16,18 +16,19 @@ class ExitEntrance {
     name;
     x;
     y;
+    adjacentLocationIds;
 
-    #isDown;
+    #isDisabled;
     #marker;
-    #icon;
 
-    constructor(id, name, x, y) {
+    constructor(id, name, x, y, adjacentLocationIds = []) {
         this.id = id;
         this.name = name;
         this.x = x;
         this.y = y;
+        this.adjacentLocationIds = adjacentLocationIds;
 
-        this.#isDown = false;
+        this.#isDisabled = false;
 
         // Get marker's relative position (based on map zoom level)
         let maxZoom = leaflet.map.getMaxZoom();
@@ -38,12 +39,12 @@ class ExitEntrance {
         });
     }
 
-    isDown() {
-        return this.#isDown;
+    isDisabled() {
+        return this.#isDisabled;
     }
-    disableEntrance(isDown) {
-        this.#isDown = isDown;
-        this.#marker.setIcon(isDown ? exitEntranceMarkerIcons.down : exitEntranceMarkerIcons.up);
+    disableEntrance(isDisabled) {
+        this.#isDisabled = isDisabled;
+        this.#marker.setIcon(isDisabled ? exitEntranceMarkerIcons.down : exitEntranceMarkerIcons.up);
     }
     marker() {
         return this.#marker;
@@ -74,7 +75,26 @@ var perspective;
 var cache = {
     nodeById: {},
     locations: [],
+    enhancedLocations: [],
 };
+var escapableLocationNames = [
+    'Zone A',
+    'Zone B',
+    'Zone C',
+    'Zone D',
+    'Zone E',
+    'Zone F',
+    'Zone G',
+    'Zone H',
+    'Zone I',
+    'Zone J',
+    'Zone K',
+    'Zone L',
+    'Zone M',
+    'Zone N',
+    'Zone O',
+    'Zone P',
+];
 
 // Auth
 /**
@@ -115,7 +135,6 @@ var api = {
             beforeSend: function (xhr) {
                 xhr.setRequestHeader(
                     'Authorization',
-                    //'Basic NWY5MzI0OWFhNWZkZjUwMDFhNmI5NzU3Om1wWEdhMnpnWTFiMGI4T2hpZ1Iwb0dsT1owOHVUN3ZIcnBJZTlpczVSTUF5WEVLTA=='
                     authorization
                 );
             },
@@ -264,6 +283,31 @@ function getModelData(cb) {
                         poiDiv.append(label);
                     }
 
+                    // Necessary data to draw escape routes
+                    cache.enhancedLocations = [];
+                    locations.forEach(location => {
+                        let nodeId = location.nodes.length > 0 ? location.nodes[0].node : null;
+                        let x = null,
+                            y = null;
+
+                        if (nodeId !== null) {
+                            let node = cache.nodeById[nodeId];
+                            if (node !== undefined) {
+                                x = node.x;
+                                y = node.y;
+                            }
+                        }
+
+                        cache.enhancedLocations.push({
+                            locationId: location.id,
+                            locationName: location.name,
+                            nodeId: nodeId,
+                            hasEscapeRoute: nodeId !== null && escapableLocationNames.includes(location.name),
+                            x: x,
+                            y: y,
+                        });
+                    });
+
                     return cb();
                 }
             );
@@ -403,7 +447,8 @@ function drawDirections(venueId, start, end) {
             // the 'start' node to the 'end' node
             leaflet.map.addLayer(
                 new L.polyline(path, {
-                    color: '#ff0000',
+                    color: 'blue',
+                    dashArray: '1 8',
                     opacity: 0.7,
                 })
             );
@@ -427,6 +472,77 @@ function getMaxBounds() {
     return new L.LatLngBounds(southWest, northEast);
 }
 
+function drawRandomRoute() {
+    // Drawing directions to and from 2 randomly select nodes in our cache
+    var size = Object.keys(cache.nodeById).length - 1;
+
+    // Only try and draw a directions line if there are 2 or more nodes in this venue
+    if (size > 1) {
+        var start = cache.nodeById[Object.keys(cache.nodeById)[Math.round(Math.random() * size)]];
+        var end;
+
+        // Make sure that the end node is not the same one as the start node
+        do {
+            end = cache.nodeById[Object.keys(cache.nodeById)[Math.round(Math.random() * size)]];
+        } while (end.id == start.id);
+
+
+        // Draw the line on the map from the start and end nodes
+        drawDirections(venueId, start.id, end.id);
+    }
+}
+
+// Drawing directions to and from 2 selected nodes in our cache
+function drawEscapeRoute(locationName) {
+    let startLocation;
+    cache.enhancedLocations.forEach(location => {
+        if (location.locationName === locationName) {
+            startLocation = location;
+        }
+    });
+
+    if (startLocation === undefined) {
+        console.error(`Location ${locationId} not found.`);
+    }
+
+    if (!startLocation.hasEscapeRoute) {
+        console.error(`Location ${locationId} does not have an escape route.`);
+    }
+
+    // Calculate the distance from current location to all exits
+    let escapeRoutes = [];
+    exitEntrances.forEach(exit => {
+        if (exit.isDisabled()) return;
+
+        exit.adjacentLocationIds.forEach(locationId => {
+            let location;
+            cache.enhancedLocations.forEach(enhancedLocation => {
+                if (enhancedLocation.locationId === locationId) {
+                    location = enhancedLocation;
+                }
+            });
+
+            if (location === undefined) return;
+
+            let diffX = startLocation.x - location.x;
+            let diffY = startLocation.y - location.y;
+
+            escapeRoutes.push({
+                nodeId: location.nodeId,
+                distance: Math.sqrt(diffX * diffX + diffY * diffY),
+            });
+        });
+    });
+
+    if (escapeRoutes.length > 0) {
+        escapeRoutes.sort((a, b) => {
+            return a.distance < b.distance ? -1 : 1;
+        });
+
+        drawDirections(venueId, startLocation.nodeId, escapeRoutes[0].nodeId);
+    }
+}
+
 function initLeaflet() {
     // Authenticate with the API keys with the MappedIn server
     // Initialize the Leaflet map and start loading the map tiles for our venue
@@ -442,42 +558,27 @@ function initLeaflet() {
             // Initializing map click event related code
             initMapInteraction();
 
-            //    // Drawing directions to and from 2 randomly select nodes in our cache
-            //    var size = Object.keys(cache.nodeById).length - 1;
-
-            //    // Only try and draw a directions line if there are 2 or more nodes in this venue
-            //    if (size > 1) {
-            //        var start =
-            //            cache.nodeById[
-            //            Object.keys(cache.nodeById)[
-            //            Math.round(Math.random() * size)
-            //            ]
-            //            ];
-            //        var end;
-
-            //        // Make sure that the end node is not the same one as the start node
-            //        do {
-            //            end =
-            //                cache.nodeById[
-            //                Object.keys(cache.nodeById)[
-            //                Math.round(Math.random() * size)
-            //                ]
-            //                ];
-            //        } while (end.id == start.id);
-
-            //        // Draw the line on the map from the start and end nodes
-            //        drawDirections(venueId, start.id, end.id);
-            //    }
+            //let size = escapableLocationNames.length - 1;
+            //let locationName = escapableLocationNames[Math.round(Math.random() * size)];
+            let locationName = 'Zone B';
+            drawEscapeRoute(locationName);
         });
     });
 }
 
 function initExitMarkers() {
     window.exitEntrances = [
-        new ExitEntrance('exit-1', 'Exit 1', 960, 1100),
-        new ExitEntrance('exit-2', 'Exit 2', 1380, 1224),
-        new ExitEntrance('exit-3', 'Exit 3', 2384, 1368),
-        new ExitEntrance('exit-4', 'Exit 4', 3168, 1584),
+        // To use 'Exit 1', must first reach 'Pre-Function Area' or 'Sands B'
+        new ExitEntrance('exit-1', 'Exit 1', 960, 1100, ['5f9ac865dc2bb23215000001', '5f9ac857dc2bb23215000000']),
+
+        // To use 'Exit 2', must first reach 'Pre-Function Area'
+        new ExitEntrance('exit-2', 'Exit 2', 1380, 1224, ['5f9ac865dc2bb23215000001']),
+
+        // To use 'Exit 3', must first reach 'Sands A'
+        new ExitEntrance('exit-3', 'Exit 3', 2384, 1368, ['5f9ac880dc2bb23215000003']),
+
+        // To use 'Exit 4', must first reach 'Sands A' or 'Foyer'
+        new ExitEntrance('exit-4', 'Exit 4', 3168, 1584, ['5f9ac880dc2bb23215000003']),
     ];
 
     let tooltipOptions = {
@@ -493,12 +594,17 @@ function initExitMarkers() {
         tooltip.setContent(location.name);
         marker.bindTooltip(tooltip);
 
-        //let tooltipElement = tooltip.getElement();
-        //tooltipElement.addEventListener('click', function (event) {
-        //    //tooltipElement.classList.add('selected-provider-tooltip');
-        //});
-        //tooltipElement.style.pointerEvents = 'auto';
-
         leaflet.map.addLayer(marker);
+    });
+
+    cache.enhancedLocations.forEach(location => {
+        if (location.x !== null && location.y !== null) {
+            let marker = L.marker([location.x, location.y], {
+                icon: exitEntranceMarkerIcons.down,
+                zIndexOffset: 100,
+            });
+
+            leaflet.map.addLayer(marker);
+        }
     });
 }
