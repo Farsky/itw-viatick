@@ -9,9 +9,13 @@ const mapMarkerIcons = {
         iconAnchor: [12, 31],
         iconUrl: 'assets/images/red-pin.svg',
     }),
-    zone: L.icon({
+    safeZone: L.icon({
         className: 'zone-marker',
-        iconUrl: 'assets/images/dot.png',
+        iconUrl: 'assets/images/black-dot.png',
+    }),
+    unsafeZone: L.icon({
+        className: 'zone-marker',
+        iconUrl: 'assets/images/red-dot.png',
     }),
 };
 
@@ -41,6 +45,14 @@ class ExitEntrance {
             icon: mapMarkerIcons.activeExit,
             zIndexOffset: 100,
         });
+
+        // Add tooltip to show exit' name
+        let tooltip = L.tooltip({
+            direction: 'top',
+            interactive: true,
+        });
+        tooltip.setContent(name);
+        this.#marker.bindTooltip(tooltip);
     }
 
     isDisabled() {
@@ -49,6 +61,58 @@ class ExitEntrance {
     disableEntrance(isDisabled) {
         this.#isDisabled = isDisabled;
         this.#marker.setIcon(isDisabled ? mapMarkerIcons.inactiveExit : mapMarkerIcons.activeExit);
+    }
+    marker() {
+        return this.#marker;
+    }
+}
+
+class Location {
+    locationId;
+    locationName;
+    nodeId;
+    hasEscapeRoute;
+    x;
+    y;
+
+    #isOnFire;
+    #marker;
+
+    constructor(id, name, node, hasEscapeRoute, x, y) {
+        this.locationId = id;
+        this.locationName = name;
+        this.nodeId = node;
+        this.hasEscapeRoute = hasEscapeRoute;
+        this.x = x;
+        this.y = y;
+
+        this.#isOnFire = false;
+
+        // Get marker's relative position (based on map zoom level)
+        let maxZoom = leaflet.map.getMaxZoom();
+        let latlng = leaflet.map.unproject(projective.transform([x, y]), maxZoom);
+        this.#marker = L.marker(latlng, {
+            icon: mapMarkerIcons.safeZone,
+            zIndexOffset: 100,
+        });
+
+        // Add tooltip to show exit' name
+        let tooltip = L.tooltip({
+            className: 'zone-tooltip',
+            direction: 'center',
+            interactive: true,
+            permanent: true,
+        });
+        tooltip.setContent(name);
+        this.#marker.bindTooltip(tooltip);
+    }
+
+    isOnFire() {
+        return this.#isOnFire;
+    }
+    toggleFireWarning(isOnFire) {
+        this.#isOnFire = isOnFire;
+        this.#marker.setIcon(isOnFire ? mapMarkerIcons.unsafeZone : mapMarkerIcons.safeZone);
     }
     marker() {
         return this.#marker;
@@ -303,14 +367,14 @@ function getModelData(cb) {
                             }
                         }
 
-                        cache.enhancedLocations.push({
-                            locationId: location.id,
-                            locationName: location.name,
-                            nodeId: nodeId,
-                            hasEscapeRoute: nodeId !== null && escapableLocationNames.includes(location.name),
-                            x: x,
-                            y: y,
-                        });
+                        if (!escapableLocationNames.includes(location.name)) return;
+
+                        cache.enhancedLocations.push(new Location(location.id
+                            , location.name
+                            , nodeId
+                            , nodeId !== null && escapableLocationNames.includes(location.name)
+                            , x
+                            , y));
                     });
 
                     return cb();
@@ -564,48 +628,16 @@ function initExitMarkers() {
         new ExitEntrance('exit-4', 'Exit 4', 3168, 1584, ['5f9ac880dc2bb23215000003']),
     ];
 
-    let tooltipOptions = {
-        direction: 'top',
-        interactive: true,
-    };
-
     exitEntrances.forEach(location => {
-        let marker = location.marker();
-
-        // Add tooltip to show exit' name
-        let tooltip = L.tooltip(tooltipOptions);
-        tooltip.setContent(location.name);
-        marker.bindTooltip(tooltip);
-
-        leaflet.map.addLayer(marker);
+        leaflet.map.addLayer(location.marker());
     });
 }
 
 function initZoneMarkers() {
-    let maxZoom = leaflet.map.getMaxZoom();
-
-    let tooltipOptions = {
-        className: 'zone-tooltip',
-        direction: 'center',
-        interactive: true,
-        permanent: true,
-    };
-
     cache.enhancedLocations.forEach(location => {
         if (escapableLocationNames.includes(location.locationName)
             && location.x !== null && location.y !== null) {
-            let latlng = leaflet.map.unproject(projective.transform([location.x, location.y]), maxZoom);
-            let marker = L.marker(latlng, {
-                icon: mapMarkerIcons.zone,
-                zIndexOffset: 100,
-            });
-
-            // Add tooltip to show exit' name
-            let tooltip = L.tooltip(tooltipOptions);
-            tooltip.setContent(location.locationName);
-            marker.bindTooltip(tooltip);
-
-            leaflet.map.addLayer(marker);
+            leaflet.map.addLayer(location.marker());
         }
     });
 }
