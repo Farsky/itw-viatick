@@ -422,10 +422,30 @@ function initLeaflet() {
 
 function initExitMarkers() {
     let exitLocations = [
-        { x: 960, y: 1100 },
-        { x: 1380, y: 1224 },
-        { x: 2384, y: 1368 },
-        { x: 3168, y: 1584 },
+        {
+            id: 'exit-1',
+            name: 'Exit 1',
+            x: 960,
+            y: 1100
+        },
+        {
+            id: 'exit-2',
+            name: 'Exit 2',
+            x: 1380,
+            y: 1224
+        },
+        {
+            id: 'exit-3',
+            name: 'Exit 3',
+            x: 2384,
+            y: 1368
+        },
+        {
+            id: 'exit-4',
+            name: 'Exit 4',
+            x: 3168,
+            y: 1584
+        },
     ];
 
     let icon = L.icon({
@@ -434,16 +454,32 @@ function initExitMarkers() {
         className: 'green-exit-marker',
     });
 
-    leaflet.layers['exit'] = L.layerGroup([]);
+    let maxZoom = leaflet.map.getMaxZoom();
+
+    let tooltipOptions = {
+        direction: 'top',
+        interactive: true,
+    };
 
     exitLocations.forEach(location => {
-        let latlng = leaflet.map.unproject(
-            [location.x, location.y],
-            leaflet.map.getMaxZoom()
-        );
+        // Get marker's relative position (based on map zoom level)
+        let latlng = leaflet.map.unproject([location.x, location.y], maxZoom);
         let marker = L.marker(latlng, {
             icon: icon,
+            zIndexOffset: 100,
         });
+
+        // Add tooltip to show exit' name
+        let tooltip = L.tooltip(tooltipOptions);
+        tooltip.setContent(location.name);
+        marker.bindTooltip(tooltip);
+
+        //let tooltipElement = tooltip.getElement();
+        //tooltipElement.addEventListener('click', function (event) {
+        //    //tooltipElement.classList.add('selected-provider-tooltip');
+        //});
+        //tooltipElement.style.pointerEvents = 'auto';
+
         leaflet.map.addLayer(marker);
     });
 }
