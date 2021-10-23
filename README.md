@@ -164,9 +164,7 @@ initProjective(map.perspectives['< your perspective name >']);
 var projectedPoint = projective.transform([ '< x value >', '< y value >']);
 ```
 
-## API v1 Documentation
-
-[Get V1 documentation here](../../v1.md)
+## References
 [stoBU](https://github.com/davemuir/stoBU/tree/49ced477ffc5cc8ea77a1728333b2839115cb7e7/public/mappedin_api)
 [Leaflet](https://leafletjs.com/reference-1.7.1.html)
 [Sequelize](https://sequelize.org/)
