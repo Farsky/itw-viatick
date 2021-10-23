@@ -1,3 +1,19 @@
 .exit-marker {
     width: 24px;
 }
+
+.zone-marker {
+    width: 12px;
+}
+
+.leaflet-tooltip.zone-tooltip {
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    font-weight: bold;
+    margin-top: -10px;
+}
+
+    .leaflet-tooltip.zone-tooltip::before {
+        border-top-color: transparent;
+    }

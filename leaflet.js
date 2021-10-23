@@ -1,13 +1,17 @@
-const exitEntranceMarkerIcons = {
-    up: L.icon({
+const mapMarkerIcons = {
+    activeExit: L.icon({
         className: 'exit-marker',
         iconAnchor: [12, 31],
         iconUrl: 'assets/images/green-pin.svg',
     }),
-    down: L.icon({
+    inactiveExit: L.icon({
         className: 'exit-marker',
         iconAnchor: [12, 31],
         iconUrl: 'assets/images/red-pin.svg',
+    }),
+    zone: L.icon({
+        className: 'zone-marker',
+        iconUrl: 'assets/images/dot.png',
     }),
 };
 
@@ -34,7 +38,7 @@ class ExitEntrance {
         let maxZoom = leaflet.map.getMaxZoom();
         let latlng = leaflet.map.unproject([x, y], maxZoom);
         this.#marker = L.marker(latlng, {
-            icon: exitEntranceMarkerIcons.up,
+            icon: mapMarkerIcons.activeExit,
             zIndexOffset: 100,
         });
     }
@@ -44,7 +48,7 @@ class ExitEntrance {
     }
     disableEntrance(isDisabled) {
         this.#isDisabled = isDisabled;
-        this.#marker.setIcon(isDisabled ? exitEntranceMarkerIcons.down : exitEntranceMarkerIcons.up);
+        this.#marker.setIcon(isDisabled ? mapMarkerIcons.inactiveExit : mapMarkerIcons.activeExit);
     }
     marker() {
         return this.#marker;
@@ -321,21 +325,15 @@ function getModelData(cb) {
  * depending on their category
  **/
 function initLocationMarkers(venueId) {
-    for (var i = 0; i < cache.locations.length; i++) {
-        // Skip parsing any locations that do not have any categories
-        if (!cache.locations[i].categories) continue;
-
+    for (let location of cache.locations) {
         // Processing all nodes for the current location
-        for (var j = 0; j < cache.locations[i].nodes.length; j++) {
+        for (let locationNode of location.nodes) {
             // Only parse nodes that belong in the currently displayed map
-            if (cache.locations[i].nodes[j].map === map.id) {
+            if (locationNode.map === map.id) {
                 // Make sure the current node exists in our node cache and is not null
                 // NOTE: This error should not occur for a venue in production. If it does please,
                 // contact MappedIn support as this error indicates bad venue data has some been created
-                var node =
-                    cache.nodeById[
-                    cache.locations[i].nodes[j].node
-                    ];
+                var node = cache.nodeById[locationNode.node];
                 if (!node) continue;
 
                 // Using our projective transform matrix, we convert the node's x and y position into a LatLng
@@ -345,24 +343,23 @@ function initLocationMarkers(venueId) {
                     leaflet.map.getMaxZoom()
                 );
 
-                // Create and cache Leaflet marker layers for the current location's categories
-                // These layers will be used for toggling markers for different categories on our map
-                cache.locations[i].categories.forEach(function (
-                    category
-                ) {
-                    leaflet.layers[category] =
-                        leaflet.layers[category] ||
-                        L.layerGroup([]);
+                var marker = L.marker(latlng);
 
-                    var marker = L.marker(latlng);
+                // NOTE: In production code it is recommended that you do not add custom properties like this.
+                // Instead extend the marker class to add such new properties.
+                // More info here: http://stackoverflow.com/a/17424238/616561
+                marker.location = location;
 
-                    // NOTE: In production code it is recommended that you do not add custom properties like this.
-                    // Instead extend the marker class to add such new properties.
-                    // More info here: http://stackoverflow.com/a/17424238/616561
-                    marker.location = cache.locations[i];
-
-                    leaflet.layers[category].addLayer(marker);
-                });
+                if (location.categories.length > 0) {
+                    // Create and cache Leaflet marker layers for the current location's categories
+                    // These layers will be used for toggling markers for different categories on our map
+                    location.categories.forEach(function (category) {
+                        leaflet.layers[category] = leaflet.layers[category] || L.layerGroup([]);
+                        leaflet.layers[category].addLayer(marker);
+                    });
+                } else {
+                    leaflet.map.addLayer(marker);
+                }
             }
         }
     }
@@ -552,24 +549,6 @@ function drawEscapeRoute(locationName) {
     }
 }
 
-function initLeaflet() {
-    // Authenticate with the API keys with the MappedIn server
-    // Initialize the Leaflet map and start loading the map tiles for our venue
-    init(venueId, function () {
-        // Building our location, nodes and category data cache
-        getModelData(function () {
-            // Initializing our category marker layers for displaying in the Leaflet map
-            initLocationMarkers(venueId);
-
-            // Init markers for floor exits
-            initExitMarkers();
-
-            // Initializing map click event related code
-            initMapInteraction();
-        });
-    });
-}
-
 function initExitMarkers() {
     window.exitEntrances = [
         // To use 'Exit 1', must first reach 'Pre-Function Area' or 'Sands B'
@@ -600,15 +579,52 @@ function initExitMarkers() {
 
         leaflet.map.addLayer(marker);
     });
+}
+
+function initZoneMarkers() {
+    let maxZoom = leaflet.map.getMaxZoom();
+
+    let tooltipOptions = {
+        className: 'zone-tooltip',
+        direction: 'center',
+        interactive: true,
+        permanent: true,
+    };
 
     cache.enhancedLocations.forEach(location => {
-        if (location.x !== null && location.y !== null) {
-            let marker = L.marker([location.x, location.y], {
-                icon: exitEntranceMarkerIcons.down,
+        if (escapableLocationNames.includes(location.locationName)
+            && location.x !== null && location.y !== null) {
+            let latlng = leaflet.map.unproject(projective.transform([location.x, location.y]), maxZoom);
+            let marker = L.marker(latlng, {
+                icon: mapMarkerIcons.zone,
                 zIndexOffset: 100,
             });
 
+            // Add tooltip to show exit' name
+            let tooltip = L.tooltip(tooltipOptions);
+            tooltip.setContent(location.locationName);
+            marker.bindTooltip(tooltip);
+
             leaflet.map.addLayer(marker);
         }
+    });
+}
+
+function initLeaflet() {
+    // Authenticate with the API keys with the MappedIn server
+    // Initialize the Leaflet map and start loading the map tiles for our venue
+    init(venueId, function () {
+        // Building our location, nodes and category data cache
+        getModelData(function () {
+            // Initializing our category marker layers for displaying in the Leaflet map
+            //initLocationMarkers(venueId);
+
+            // Init markers for floor exits and zones
+            initExitMarkers();
+            initZoneMarkers();
+
+            // Initializing map click event related code
+            initMapInteraction();
+        });
     });
 }
