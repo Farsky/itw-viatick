@@ -1,3 +1,55 @@
+const exitEntranceMarkerIcons = {
+    up: L.icon({
+        className: 'exit-marker',
+        iconAnchor: [12, 31],
+        iconUrl: 'assets/images/green-pin.svg',
+    }),
+    down: L.icon({
+        className: 'exit-marker',
+        iconAnchor: [12, 31],
+        iconUrl: 'assets/images/red-pin.svg',
+    }),
+};
+
+class ExitEntrance {
+    id;
+    name;
+    x;
+    y;
+
+    #isDown;
+    #marker;
+    #icon;
+
+    constructor(id, name, x, y) {
+        this.id = id;
+        this.name = name;
+        this.x = x;
+        this.y = y;
+
+        this.#isDown = false;
+
+        // Get marker's relative position (based on map zoom level)
+        let maxZoom = leaflet.map.getMaxZoom();
+        let latlng = leaflet.map.unproject([x, y], maxZoom);
+        this.#marker = L.marker(latlng, {
+            icon: exitEntranceMarkerIcons.up,
+            zIndexOffset: 100,
+        });
+    }
+
+    isDown() {
+        return this.#isDown;
+    }
+    disableEntrance(isDown) {
+        this.#isDown = isDown;
+        this.#marker.setIcon(isDown ? exitEntranceMarkerIcons.down : exitEntranceMarkerIcons.up);
+    }
+    marker() {
+        return this.#marker;
+    }
+}
+
 // We will be using MappedIn API V1
 var host = {
     auth: 'https://auth.mappedin.com',
@@ -421,53 +473,20 @@ function initLeaflet() {
 }
 
 function initExitMarkers() {
-    let exitLocations = [
-        {
-            id: 'exit-1',
-            name: 'Exit 1',
-            x: 960,
-            y: 1100
-        },
-        {
-            id: 'exit-2',
-            name: 'Exit 2',
-            x: 1380,
-            y: 1224
-        },
-        {
-            id: 'exit-3',
-            name: 'Exit 3',
-            x: 2384,
-            y: 1368
-        },
-        {
-            id: 'exit-4',
-            name: 'Exit 4',
-            x: 3168,
-            y: 1584
-        },
+    window.exitEntrances = [
+        new ExitEntrance('exit-1', 'Exit 1', 960, 1100),
+        new ExitEntrance('exit-2', 'Exit 2', 1380, 1224),
+        new ExitEntrance('exit-3', 'Exit 3', 2384, 1368),
+        new ExitEntrance('exit-4', 'Exit 4', 3168, 1584),
     ];
-
-    let icon = L.icon({
-        iconUrl: 'assets/images/green-pin.svg',
-        iconAnchor: [12, 31],
-        className: 'green-exit-marker',
-    });
-
-    let maxZoom = leaflet.map.getMaxZoom();
 
     let tooltipOptions = {
         direction: 'top',
         interactive: true,
     };
 
-    exitLocations.forEach(location => {
-        // Get marker's relative position (based on map zoom level)
-        let latlng = leaflet.map.unproject([location.x, location.y], maxZoom);
-        let marker = L.marker(latlng, {
-            icon: icon,
-            zIndexOffset: 100,
-        });
+    exitEntrances.forEach(location => {
+        let marker = location.marker();
 
         // Add tooltip to show exit' name
         let tooltip = L.tooltip(tooltipOptions);
