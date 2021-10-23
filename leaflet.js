@@ -95,6 +95,7 @@ var escapableLocationNames = [
     'Zone O',
     'Zone P',
 ];
+var escapeRoute = null;
 
 // Auth
 /**
@@ -445,13 +446,16 @@ function drawDirections(venueId, start, end) {
 
             // Making Leaflet draw a red lines showing the path to take from
             // the 'start' node to the 'end' node
-            leaflet.map.addLayer(
-                new L.polyline(path, {
-                    color: 'blue',
-                    dashArray: '1 8',
-                    opacity: 0.7,
-                })
-            );
+            if (escapeRoute !== null) {
+                leaflet.map.removeLayer(escapeRoute);
+            }
+
+            escapeRoute = new L.polyline(path, {
+                color: 'blue',
+                dashArray: '1 8',
+                opacity: 0.7,
+            });
+            leaflet.map.addLayer(escapeRoute);
         }
     );
 }
@@ -524,21 +528,26 @@ function drawEscapeRoute(locationName) {
 
             if (location === undefined) return;
 
+            // Calculate distance using hypotenuse formula
+            // More info: https://www.omnicalculator.com/math/hypotenuse
             let diffX = startLocation.x - location.x;
             let diffY = startLocation.y - location.y;
+            let distance = Math.sqrt(diffX * diffX + diffY * diffY);
 
             escapeRoutes.push({
                 nodeId: location.nodeId,
-                distance: Math.sqrt(diffX * diffX + diffY * diffY),
+                distance: distance,
             });
         });
     });
 
     if (escapeRoutes.length > 0) {
+        // Sort escape routes by distance
         escapeRoutes.sort((a, b) => {
             return a.distance < b.distance ? -1 : 1;
         });
 
+        // Draw the shortest route
         drawDirections(venueId, startLocation.nodeId, escapeRoutes[0].nodeId);
     }
 }
@@ -557,11 +566,6 @@ function initLeaflet() {
 
             // Initializing map click event related code
             initMapInteraction();
-
-            //let size = escapableLocationNames.length - 1;
-            //let locationName = escapableLocationNames[Math.round(Math.random() * size)];
-            let locationName = 'Zone B';
-            drawEscapeRoute(locationName);
         });
     });
 }

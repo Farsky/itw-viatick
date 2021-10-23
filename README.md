@@ -171,3 +171,4 @@ var projectedPoint = projective.transform([ '< x value >', '< y value >']);
 [Leaflet](https://leafletjs.com/reference-1.7.1.html)
 [Sequelize](https://sequelize.org/)
 https://github.com/MappedIn/platform-api
+https://www.omnicalculator.com/math/hypotenuse
