@@ -25,10 +25,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // will look for "./assets/js/app.js".
 app.use(express.static(path.join(__dirname, 'assets')));
 
-//const db = require("models");
-//db.sequelize.sync({ force: true }).then(() => {
-//    console.log("Drop and re-sync db.");
-//});
+const db = require("./app/models");
+db.sequelize.sync({ force: true }).then(() => {
+    console.log("Drop and re-sync db.");
+});
 
 // simple route
 app.get('/', (req, res) => {

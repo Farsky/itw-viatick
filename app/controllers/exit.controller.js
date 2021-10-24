@@ -1,4 +1,4 @@
-const db = require("./models");
+const db = require('../models');
 const Exit = db.exits;
 const Op = db.Sequelize.Op;
 
@@ -10,7 +10,7 @@ exports.readAll = (req, res) => {
         })
         .catch(err => {
             res.status(500).send({
-                message: err.message || "Some error occurred while retrieving exits."
+                message: err.message || 'Some error occurred while retrieving exits.'
             });
         });
 };
@@ -23,7 +23,7 @@ exports.readActive = (req, res) => {
         })
         .catch(err => {
             res.status(500).send({
-                message: err.message || "Some error occurred while retrieving exits."
+                message: err.message || 'Some error occurred while retrieving exits.'
             });
         });
 };
@@ -42,7 +42,7 @@ exports.update = (req, res) => {
         .then(num => {
             if (num == 1) {
                 res.send({
-                    message: "Exit was updated successfully."
+                    message: 'Exit was updated successfully.'
                 });
             } else {
                 res.send({
@@ -52,7 +52,7 @@ exports.update = (req, res) => {
         })
         .catch(err => {
             res.status(500).send({
-                message: "Error updating Exit with id=" + id
+                message: 'Error updating Exit with id=' + id
             });
         });
 };
