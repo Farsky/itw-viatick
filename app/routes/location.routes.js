@@ -1,16 +1,22 @@
 module.exports = app => {
-    const exits = require('../controllers/location.controller.js');
+    const locations = require('../controllers/location.controller.js');
 
     var router = require('express').Router();
 
     // Retrieve all Locations
-    router.get('/', exits.readAll);
+    router.get('/', locations.readAll);
 
     // Retrieve all active Locations
-    router.get('/active', exits.readAll);
+    router.get('/active', locations.readActive);
 
-    // Enable/disable an Location with id
-    router.put('/:id/:isEnabled', exits.update);
+    // Create a new Location
+    router.post('/', locations.create);
 
-    app.use('/api/location', router);
+    // Toggle fire warning on a Location with id
+    router.put('/:id/:isOnFire', locations.update);
+
+    // Delete a Location with id
+    router.delete('/:id', locations.delete);
+
+    app.use('/api/locations', router);
 };

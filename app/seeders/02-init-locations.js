@@ -2,7 +2,7 @@
 
 module.exports = {
     up: async (queryInterface, Sequelize) => {
-        await queryInterface.bulkInsert('Locations', [
+        await queryInterface.bulkInsert('Location', [
             { locationId: '5f9ac59cdc2bb20e9b000058', isOnFire: false, },
             { locationId: '5f9ac5acdc2bb20e9b000059', isOnFire: false, },
             { locationId: '5f9ac5b0dc2bb20e9b00005a', isOnFire: false, },
@@ -23,6 +23,6 @@ module.exports = {
     },
 
     down: async (queryInterface, Sequelize) => {
-        await queryInterface.bulkDelete('Locations', null, {});
+        await queryInterface.bulkDelete('Location', null, {});
     }
 };

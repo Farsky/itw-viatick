@@ -1,5 +1,5 @@
 const db = require('../models');
-const Exit = db.exits;
+const Exit = db.Exit;
 const Op = db.Sequelize.Op;
 
 // Retrieve all Tutorials from the database.

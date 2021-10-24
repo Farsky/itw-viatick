@@ -1,8 +1,8 @@
 const db = require('../models');
-const Location = db.exits;
+const Location = db.Location;
 const Op = db.Sequelize.Op;
 
-// Retrieve all Tutorials from the database.
+// Retrieve all Locations from the database.
 exports.readAll = (req, res) => {
     Location.findAll()
         .then(data => {
@@ -15,7 +15,7 @@ exports.readAll = (req, res) => {
         });
 };
 
-// Retrieve all Tutorials from the database.
+// Retrieve all Locations from the database.
 exports.readActive = (req, res) => {
     Location.findAll({ where: { isDisabled: false } })
         .then(data => {
@@ -28,15 +28,22 @@ exports.readActive = (req, res) => {
         });
 };
 
-// Retrieve all Tutorials from the database.
-exports.read = (req, res) => {
-    Location.findAll({ where: { locationId: req.params.id } })
+// Retrieve all Locations from the database.
+exports.readOne = (req, res) => {
+    const id = req.params.id;
+
+    Location.findByPk(id)
         .then(data => {
-            res.send(data);
+            if (data) {
+                res.send(data);
+            } else {
+                res.status(404).send({
+                    message: `Cannot find Location with id=${id}.`
+                });            }
         })
         .catch(err => {
             res.status(500).send({
-                message: err.message || 'Error retrieving Tutorial with id=' + id
+                message: err.message || `Error retrieving Location with id=${id}.`
             });
         });
 };
@@ -46,7 +53,7 @@ exports.create = (req, res) => {
     // Validate request
     if (!req.body.locationId) {
         res.status(400).send({
-            message: 'LocationId cannot be empty!'
+            message: 'locationId cannot be empty!'
         });
         return;
     }
@@ -58,7 +65,7 @@ exports.create = (req, res) => {
     };
 
     // Save Location in the database
-    Tutorial.create(location)
+    Location.create(location)
         .then(data => {
             res.send(data);
         })
@@ -69,12 +76,12 @@ exports.create = (req, res) => {
         });
 };
 
-// Update a Tutorial by the id in the request
+// Update a Location by the id in the request
 exports.update = (req, res) => {
     const id = req.params.id;
     const isOnFire = req.params.isOnFire;
 
-    Tutorial
+    Location
         .update({
             isOnFire: isOnFire,
         }, {
@@ -98,11 +105,11 @@ exports.update = (req, res) => {
         });
 };
 
-// Delete a Tutorial with the specified id in the request
+// Delete a Location with the specified id in the request
 exports.delete = (req, res) => {
     const id = req.params.id;
 
-    Tutorial
+    Location
         .destroy({
             where: { locationId: id }
         })

@@ -7,7 +7,7 @@ module.exports = app => {
     router.get('/', exits.readAll);
 
     // Retrieve all active Exits
-    router.get('/active', exits.readAll);
+    router.get('/active', exits.readActive);
 
     // Enable/disable an Exit with id
     router.put('/:id/:isEnabled', exits.update);
