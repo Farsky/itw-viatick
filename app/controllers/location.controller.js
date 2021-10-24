@@ -17,7 +17,7 @@ exports.readAll = (req, res) => {
 
 // Retrieve all Locations from the database.
 exports.readActive = (req, res) => {
-    Location.findAll({ where: { isDisabled: false } })
+    Location.findAll({ where: { isOnFire: false } })
         .then(data => {
             res.send(data);
         })

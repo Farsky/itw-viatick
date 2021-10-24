@@ -10,7 +10,7 @@ module.exports = app => {
     router.get('/active', exits.readActive);
 
     // Enable/disable an Exit with id
-    router.put('/:id/:isEnabled', exits.update);
+    router.put('/:id/:isActive', exits.update);
 
     app.use('/api/exits', router);
 };

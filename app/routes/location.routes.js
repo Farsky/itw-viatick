@@ -9,13 +9,13 @@ module.exports = app => {
     // Retrieve all active Locations
     router.get('/active', locations.readActive);
 
-    // Create a new Location
+    // Register a Location (this location will be able to have an escape route)
     router.post('/', locations.create);
 
-    // Toggle fire warning on a Location with id
+    // Toggle fire warning on a Location
     router.put('/:id/:isOnFire', locations.update);
 
-    // Delete a Location with id
+    // Delete a Location
     router.delete('/:id', locations.delete);
 
     app.use('/api/locations', router);

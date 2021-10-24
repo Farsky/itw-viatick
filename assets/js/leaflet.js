@@ -135,7 +135,6 @@ var leaflet = {
 
 // We will be rendering the 'MappedIn Mall' venue for this demo
 var venueId = 'viatick-sands-grand-ballroom';
-var authorization;
 
 var projective;
 var map = null;
@@ -642,7 +641,7 @@ function initZoneMarkers() {
     });
 }
 
-function initLeaflet() {
+function initLeaflet(authorization) {
     // Authenticate with the API keys with the MappedIn server
     // Initialize the Leaflet map and start loading the map tiles for our venue
     init(venueId, function () {

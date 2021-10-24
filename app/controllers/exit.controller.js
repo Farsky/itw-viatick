@@ -31,11 +31,11 @@ exports.readActive = (req, res) => {
 // Update a Tutorial by the id in the request
 exports.update = (req, res) => {
     const id = req.params.id;
-    const isEnabled = req.params.isEnabled;
+    const isActive = req.params.isActive;
 
-    Tutorial
+    Exit
         .update({
-            isDisabled: !isEnabled,
+            isDisabled: !isActive,
         }, {
             where: { exitId: id }
         })

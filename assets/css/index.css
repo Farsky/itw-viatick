@@ -7,9 +7,13 @@
 }
 
 #poi-list {
+    /*background-color: white;*/
+    height: 100px;
+    left: 52px;
+    opacity: 0.5;
     position: absolute;
-    left: 10px;
-    bottom: 10px
+    top: 11px;
+    z-index: 1000;
 }
 
 .exit-marker {

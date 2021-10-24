@@ -1,19 +1,3 @@
-var mapView;
-var venue;
-var search;
-var analytics;
-
-// For the demo animation
-var polygonedLocations = [];
-
-// Track which polygon belongs to which location
-var locationsByPolygon = {};
-
-var mapList = document.getElementById('mapList');
-var mapsSortedByElevation = [];
-var div = document.getElementById('mapView');
-var mapExpanded = false;
-
 // options for Mappedin.getVenue
 // To get you started we've provided a key and secret that has access to some demo venues.
 //  - mappedin-demo-mall
@@ -38,48 +22,30 @@ var venueOptions = {
     venue: 'viatick-sands-grand-ballroom',
 };
 
-// Options for the MapView constructor
-var mapviewOptions = {
-    antialias: 'AUTO',
-    mode: Mappedin.modes.TEST,
-    onFirstMapLoaded: function () {
-        console.log('First map fully loaded. No more pop in.');
-    },
-    onDataLoaded: function () {
-        console.log(
-            '3D data loaded, map usable. Could hide loading screen here, but things will be popping in. Now you can do things that interact with the 3D scene'
-        );
-        //onDataLoaded();
-    },
-};
-
-// Options for search
-var searchOptions = {
-    key: '',
-    secret: '',
-};
-
-// Combined all of them to use Mappedin.initalize
-var options = {
-    mapview: mapviewOptions,
-    venue: venueOptions,
-    search: searchOptions,
-};
-
 // This is your main function. It talks to the mappedin API and sets everything up for you
 function initMappedin() {
-    Mappedin.initialize(options, div).then(
+    Mappedin.initialize({
+        mapview: {
+            antialias: 'AUTO',
+            mode: Mappedin.modes.TEST,
+            onFirstMapLoaded: function () {
+                console.log('First map fully loaded. No more pop in.');
+            },
+            onDataLoaded: function () {
+                console.log('3D data loaded, map usable. Could hide loading screen here, but things will be popping in. Now you can do things that interact with the 3D scene');
+            },
+        },
+        venue: venueOptions,
+        search: {
+            key: '',
+            secret: '',
+        },
+    }, div).then(
         function (data) {
-            mapView = data.mapview;
-            venue = data.venue;
-            search = data.search;
-            analytics = data.analytics;
-
-            authorization = data.venue._authorization;
-            initLeaflet();
+            initLeaflet(data.venue._authorization);
         },
         function (error) {
-            window.alert('Mappedin ' + error);
+            window.alert(`Mappedin failure: ${error}`);
         }
     );
 }
