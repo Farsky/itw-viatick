@@ -367,7 +367,7 @@ function getModelData(cb) {
                             }
                         }
 
-                        if (!escapableLocationNames.includes(location.name)) return;
+                        //if (!escapableLocationNames.includes(location.name)) return;
 
                         cache.enhancedLocations.push(new Location(location.id
                             , location.name
