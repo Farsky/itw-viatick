@@ -2,20 +2,20 @@ const mapMarkerIcons = {
     activeExit: L.icon({
         className: 'exit-marker',
         iconAnchor: [12, 31],
-        iconUrl: 'assets/images/green-pin.svg',
+        iconUrl: '/images/green-pin.svg',
     }),
     inactiveExit: L.icon({
         className: 'exit-marker',
         iconAnchor: [12, 31],
-        iconUrl: 'assets/images/red-pin.svg',
+        iconUrl: '/images/red-pin.svg',
     }),
     safeZone: L.icon({
         className: 'zone-marker',
-        iconUrl: 'assets/images/black-dot.png',
+        iconUrl: '/images/black-dot.png',
     }),
     unsafeZone: L.icon({
         className: 'zone-marker',
-        iconUrl: 'assets/images/red-dot.png',
+        iconUrl: '/images/red-dot.png',
     }),
 };
 
