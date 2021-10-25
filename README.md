@@ -9,7 +9,8 @@ Created date: 2021-10-24
 This documentation is intented for the interviewers of this test ([Edmund Gair](mailto:edmund@viatick.com) and [Anna Polubatko](mailto:anna@viatick.com)). The following steps will help you review this repository.
 
 ## 1. Getting Started
-- Open [index.html](index.html) from the root folder to see the map.
+- Open the terminal of your choice from the root folder (cmd/Powershell/etc) and type `npm run dev` to start the application.
+- Browse `http://localhost:3000` to see the map.
 - The exits are marked with a green icon and will display their names when hovering.
 - The zones A-P are marked with black dot icons and have their names display above the dot.
 - To enable/disable an exit entrance:
