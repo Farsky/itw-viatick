@@ -161,26 +161,62 @@ ViatickMap = (function (Mappedin, L) {
         locations: [],
         enhancedLocations: [],
         exits: [],
+        zones: [],
     };
-    var escapableLocationNames = [
-        'Zone A',
-        'Zone B',
-        'Zone C',
-        'Zone D',
-        'Zone E',
-        'Zone F',
-        'Zone G',
-        'Zone H',
-        'Zone I',
-        'Zone J',
-        'Zone K',
-        'Zone L',
-        'Zone M',
-        'Zone N',
-        'Zone O',
-        'Zone P',
-    ];
+
     var escapeRoute = null;
+
+    function getExits() {
+        return new Promise((resolve, reject) => {
+            let httpRequest = new XMLHttpRequest();
+
+            httpRequest.onreadystatechange = () => {
+                if (httpRequest.readyState === XMLHttpRequest.DONE) {
+                    if (httpRequest.status === 200) {
+                        // Parse the content to JSON
+                        const exits = JSON.parse(httpRequest.responseText);
+
+                        // Store exits in cache 
+                        exits.forEach(exit => {
+                            const adjacentLocationIds = exit.adjacentLocationIds.split(',');
+                            cache.exits.push(new ExitEntrance(exit.exitId, exit.name, exit.x, exit.y, adjacentLocationIds));
+                        });
+
+                        resolve();
+                    } else {
+                        console.error(`Status code ${httpRequest.status}: ${httpRequest.responseText}`);
+                        reject();
+                    }
+                }
+            };
+
+            httpRequest.onerror = () => reject();
+            httpRequest.open('GET', '/api/exits');
+            httpRequest.send();
+        });
+    }
+
+    function getLocations() {
+        return new Promise((resolve, reject) => {
+            let httpRequest = new XMLHttpRequest();
+
+            httpRequest.onreadystatechange = () => {
+                if (httpRequest.readyState === XMLHttpRequest.DONE) {
+                    if (httpRequest.status === 200) {
+                        cache.zones = JSON.parse(httpRequest.responseText);
+                        resolve();
+                    } else {
+                        console.error(`Status code ${httpRequest.status}: ${httpRequest.responseText}`);
+                        reject();
+                    }
+                }
+            };
+
+            httpRequest.onerror = () => reject();
+            httpRequest.open('GET', '/api/locations');
+            httpRequest.send();
+        });
+    }
 
     // Auth
     /**
@@ -206,7 +242,7 @@ ViatickMap = (function (Mappedin, L) {
     }
 
     // Our main API object for requesting data from MappedIn
-    var api = {
+    var mappedinApi = {
         /**
          * A simple jQuery AJAX call to request the various type of data that the MappedIn web API is able to provide
          * Please consult the MappedIn API Reference doc at https://github.com/MappedIn/platform-api/blob/master/v1.md
@@ -230,7 +266,7 @@ ViatickMap = (function (Mappedin, L) {
      * Simple initialization function to get the map data for our current venue and start the map loading process
      **/
     function init(venueId, cb) {
-        api.Get('map', { venue: venueId }, function (maps) {
+        mappedinApi.Get('map', { venue: venueId }, function (maps) {
             // Getting the first map returned by MappedIn API
             map = maps[0];
 
@@ -328,119 +364,66 @@ ViatickMap = (function (Mappedin, L) {
     function getModelData(cb) {
         // Getting all locations for our venue.
         // You can also get all the location with the node objects inserted within my by passing 'embed' parameter like so:
-        // api.Get('location', { venue: venueId, embed: 'nodes' }, function (locations) { ... });
-        api.Get('location', { venue: venueId }, function (locations) {
+        // mappedinApi.Get('location', { venue: venueId, embed: 'nodes' }, function (locations) { ... });
+        mappedinApi.Get('location', { venue: venueId }, function (locations) {
             // Getting all nodes that belong to our currently selected map
-            api.Get('node', { map: map.id }, function (nodes) {
+            mappedinApi.Get('node', { map: map.id }, function (nodes) {
                 // Getting all categories that have been defined for this venue in the MappedIn portal
-                api.Get(
-                    'category',
-                    { venue: venueId },
-                    function (categories) {
-                        // Caching all of our locations
-                        cache.locations = locations;
+                mappedinApi.Get('category', { venue: venueId }, function (categories) {
+                    // Creating a hash table of all of our nodes in our cache
+                    for (var i = 0; i < nodes.length; i++) {
+                        cache.nodeById[nodes[i].id] = nodes[i];
+                    }
 
-                        // Creating a hash table of all of our nodes in our cache
-                        for (var i = 0; i < nodes.length; i++) {
-                            cache.nodeById[nodes[i].id] = nodes[i];
-                        }
-
-                        // Dynamically creating a radio button list for you to switch between different
-                        // category marker layers in Leaflet
-                        var poiDiv = $('#poi-list');
-                        for (var i = 0; i < categories.length; i++) {
-                            var radio = $('<input/>', {
-                                type: 'radio',
-                                name: 'category',
-                                value: categories[i].id,
-                            });
-
-                            // Setting the onChange listener on the radio buttons to switch between the different Leaflet layers
-                            radio.on('change', function (e) {
-                                changeCategoryById($(this).val());
-                            });
-
-                            var label = $('<label/>', { html: radio })
-                                .append(categories[i].name)
-                                .append('<br>');
-                            poiDiv.append(label);
-                        }
-
-                        // Necessary data to draw escape routes
-                        cache.enhancedLocations = [];
-                        locations.forEach(location => {
-                            let nodeId = location.nodes.length > 0 ? location.nodes[0].node : null;
-                            let x = null,
-                                y = null;
-
-                            if (nodeId !== null) {
-                                let node = cache.nodeById[nodeId];
-                                if (node !== undefined) {
-                                    x = node.x;
-                                    y = node.y;
-                                }
-                            }
-
-                            //if (!escapableLocationNames.includes(location.name)) return;
-
-                            cache.enhancedLocations.push(new Location(location.id
-                                , location.name
-                                , nodeId
-                                , nodeId !== null && escapableLocationNames.includes(location.name)
-                                , x
-                                , y));
+                    // Dynamically creating a radio button list for you to switch between different
+                    // category marker layers in Leaflet
+                    var poiDiv = $('#poi-list');
+                    for (var i = 0; i < categories.length; i++) {
+                        var radio = $('<input/>', {
+                            type: 'radio',
+                            name: 'category',
+                            value: categories[i].id,
                         });
 
-                        return cb();
+                        // Setting the onChange listener on the radio buttons to switch between the different Leaflet layers
+                        radio.on('change', function (e) {
+                            changeCategoryById($(this).val());
+                        });
+
+                        var label = $('<label/>', { html: radio })
+                            .append(categories[i].name)
+                            .append('<br>');
+                        poiDiv.append(label);
                     }
+
+                    // Necessary data to draw escape routes
+                    cache.enhancedLocations = [];
+                    locations.forEach(location => {
+                        let nodeId = location.nodes.length > 0 ? location.nodes[0].node : null;
+                        let x = null,
+                            y = null;
+
+                        if (nodeId !== null) {
+                            let node = cache.nodeById[nodeId];
+                            if (node !== undefined) {
+                                x = node.x;
+                                y = node.y;
+                            }
+                        }
+
+                        cache.enhancedLocations.push(new Location(location.id
+                            , location.name
+                            , nodeId
+                            , nodeId !== null && cache.zones.some(zone => { return zone.locationId === location.id; })
+                            , x
+                            , y));
+                    });
+
+                    return cb();
+                }
                 );
             });
         });
-    }
-
-    /**
-     * This function is used to pre-process all of our locations and create marker layers for them
-     * depending on their category
-     **/
-    function initLocationMarkers(venueId) {
-        for (let location of cache.locations) {
-            // Processing all nodes for the current location
-            for (let locationNode of location.nodes) {
-                // Only parse nodes that belong in the currently displayed map
-                if (locationNode.map === map.id) {
-                    // Make sure the current node exists in our node cache and is not null
-                    // NOTE: This error should not occur for a venue in production. If it does please,
-                    // contact MappedIn support as this error indicates bad venue data has some been created
-                    var node = cache.nodeById[locationNode.node];
-                    if (!node) continue;
-
-                    // Using our projective transform matrix, we convert the node's x and y position into a LatLng
-                    // object for drawing on our Leaflet map
-                    var latlng = leaflet.map.unproject(
-                        projective.transform([node.x, node.y]),
-                        leaflet.map.getMaxZoom()
-                    );
-
-                    var marker = L.marker(latlng);
-
-                    // NOTE: In production code it is recommended that you do not add custom properties like this.
-                    // Instead extend the marker class to add such new properties.
-                    // More info here: http://stackoverflow.com/a/17424238/616561
-                    marker.location = location;
-
-                    if (location.categories.length > 0) {
-                        // Create and cache Leaflet marker layers for the current location's categories
-                        // These layers will be used for toggling markers for different categories on our map
-                        location.categories.forEach(function (category) {
-                            leaflet.layers[category] = leaflet.layers[category] || L.layerGroup([]);
-                            leaflet.layers[category].addLayer(marker);
-                        });
-                    } else {
-                        leaflet.map.addLayer(marker);
-                    }
-                }
-            }
-        }
     }
 
     /**
@@ -499,7 +482,7 @@ ViatickMap = (function (Mappedin, L) {
      **/
     function drawDirections(venueId, start, end) {
         // Calling API to get the direction from 'start' to 'end' nodes
-        api.Get('directions', {
+        mappedinApi.Get('directions', {
             venue: venueId,
             origin: start,
             destination: end,
@@ -552,41 +535,7 @@ ViatickMap = (function (Mappedin, L) {
         return new L.LatLngBounds(southWest, northEast);
     }
 
-    function drawRandomRoute() {
-        // Drawing directions to and from 2 randomly select nodes in our cache
-        var size = Object.keys(cache.nodeById).length - 1;
-
-        // Only try and draw a directions line if there are 2 or more nodes in this venue
-        if (size > 1) {
-            var start = cache.nodeById[Object.keys(cache.nodeById)[Math.round(Math.random() * size)]];
-            var end;
-
-            // Make sure that the end node is not the same one as the start node
-            do {
-                end = cache.nodeById[Object.keys(cache.nodeById)[Math.round(Math.random() * size)]];
-            } while (end.id == start.id);
-
-
-            // Draw the line on the map from the start and end nodes
-            drawDirections(venueId, start.id, end.id);
-        }
-    }
-
     function initExitMarkers() {
-        cache.exits = [
-            // To use 'Exit 1', must first reach 'Pre-Function Area' or 'Sands B'
-            new ExitEntrance('exit-1', 'Exit 1', 960, 1100, ['5f9ac865dc2bb23215000001', '5f9ac857dc2bb23215000000']),
-
-            // To use 'Exit 2', must first reach 'Pre-Function Area'
-            new ExitEntrance('exit-2', 'Exit 2', 1380, 1224, ['5f9ac865dc2bb23215000001']),
-
-            // To use 'Exit 3', must first reach 'Sands A'
-            new ExitEntrance('exit-3', 'Exit 3', 2384, 1368, ['5f9ac880dc2bb23215000003']),
-
-            // To use 'Exit 4', must first reach 'Sands A' or 'Foyer'
-            new ExitEntrance('exit-4', 'Exit 4', 3168, 1584, ['5f9ac880dc2bb23215000003']),
-        ];
-
         cache.exits.forEach(location => {
             leaflet.map.addLayer(location.marker());
         });
@@ -594,7 +543,7 @@ ViatickMap = (function (Mappedin, L) {
 
     function initZoneMarkers() {
         cache.enhancedLocations.forEach(location => {
-            if (escapableLocationNames.includes(location.locationName)
+            if (cache.zones.some(zone => { return zone.locationId === location.locationId; })
                 && location.x !== null && location.y !== null) {
                 leaflet.map.addLayer(location.marker());
             }
@@ -609,15 +558,16 @@ ViatickMap = (function (Mappedin, L) {
         init(venueId, function () {
             // Building our location, nodes and category data cache
             getModelData(function () {
-                // Initializing our category marker layers for displaying in the Leaflet map
-                //initLocationMarkers(venueId);
+                const getExitsPromise = getExits();
+                const getLocationsPromise = getLocations();
+                Promise.all([getExitsPromise, getLocationsPromise]).then(() => {
+                    // Init markers for floor exits and zones
+                    initExitMarkers();
+                    initZoneMarkers();
 
-                // Init markers for floor exits and zones
-                initExitMarkers();
-                initZoneMarkers();
-
-                // Initializing map click event related code
-                //initMapInteraction();
+                    // Initializing map click event related code
+                    //initMapInteraction();
+                });
             });
         });
     }
@@ -749,6 +699,8 @@ ViatickMap = (function (Mappedin, L) {
                 } else {
                     location.toggleFireIndicator(!location.isOnFire());
                 }
+
+
             });
         }
     };

@@ -2,7 +2,7 @@ const db = require('../models');
 const Exit = db.Exit;
 const Op = db.Sequelize.Op;
 
-// Retrieve all Tutorials from the database.
+// Retrieve all Exits from the database.
 exports.readAll = (req, res) => {
     Exit.findAll()
         .then(data => {
@@ -15,7 +15,7 @@ exports.readAll = (req, res) => {
         });
 };
 
-// Retrieve all Tutorials from the database.
+// Retrieve all Exits from the database.
 exports.readActive = (req, res) => {
     Exit.findAll({ where: { isDisabled: false } })
         .then(data => {
@@ -28,31 +28,33 @@ exports.readActive = (req, res) => {
         });
 };
 
-// Update a Tutorial by the id in the request
+// Update a Exit by the id in the request
 exports.update = (req, res) => {
     const id = req.params.id;
-    const isActive = req.params.isActive;
+    const isActive = req.params.isActive === 'true';
 
     Exit
-        .update({
-            isDisabled: !isActive,
-        }, {
-            where: { exitId: id }
-        })
-        .then(num => {
-            if (num == 1) {
-                res.send({
-                    message: 'Exit was updated successfully.'
+        .findByPk(id)
+        .then(exit => {
+            if (exit === null) {
+                res.status(400).send({
+                    message: 'Error updating Location with id=' + id
                 });
             } else {
-                res.send({
-                    message: `Cannot update Exit with id=${id}. Maybe Exit was not found or req.body is empty!`
-                });
+                exit
+                    .update({
+                        isDisabled: !isActive,
+                    })
+                    .then(() => {
+                        res.send({
+                            message: 'Exit was updated successfully.'
+                        });
+                    })
+                    .catch(err => {
+                        res.status(500).send({
+                            message: 'Error updating Exit with id=' + id
+                        });
+                    });
             }
-        })
-        .catch(err => {
-            res.status(500).send({
-                message: 'Error updating Exit with id=' + id
-            });
         });
 };

@@ -9,7 +9,9 @@ Created date: 2021-10-24
 This documentation is intented for the interviewers of this test ([Edmund Gair](mailto:edmund@viatick.com) and [Anna Polubatko](mailto:anna@viatick.com)). The following steps will help you review this repository.
 
 ## 1. Getting Started
-- Open the terminal of your choice from the root folder (cmd/Powershell/etc) and type `npm run dev` to start the application.
+- Open the terminal of your choice from the root folder (cmd/Powershell/etc)
+- Type `npm install` to restore essential libraries
+- Type `npm run start` to start the application.
 - Browse `http://localhost:3000` to see the map.
 - The exits are marked with a green icon and will display their names when hovering.
 - The zones A-P are marked with black dot icons and have their names display above the dot.
@@ -36,7 +38,7 @@ This documentation is intented for the interviewers of this test ([Edmund Gair](
   - Execute script `ViatickMap.clearEscapeRoute()`
 
 ## 2. Tests
-No test is available at the moment
+- To test the API, type `npm run test`
 
 ## 3. API
 ### Exit API
@@ -50,9 +52,9 @@ No test is available at the moment
 | Endpoint | Method | Description |
 |--|--|--|
 | /api/locations | GET | Get all locations |
-| /api/locations/active | GET | Get all active locations |
-| /api/locations | POST | Register a Location (this location will be able to have an escape route) |
-| /api/locations/:id | PUT | Toggle fire warning on a Location |
+| /api/locations/active | GET | Get all active locations (not on fire) |
+| /api/locations | POST | Register a Location (this location will be able to have an escape route)<br />Body: { locationId: string } |
+| /api/locations/:id/:isOnFire | PUT | Toggle fire warning on a Location |
 | /api/locations/:id | DELETE | Unregister a Location |
 
 ## 4. References
