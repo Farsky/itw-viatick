@@ -67,3 +67,5 @@ This documentation is intented for the interviewers of this test ([Edmund Gair](
 - [MySQL free hosting](https://www.freesqldatabase.com/)
 - [Sequelize + MySQL](https://www.esparkinfo.com/node-js-with-mysql-using-sequelize-express.html)
 - [Sequelize + MySQL](https://www.bezkoder.com/node-js-express-sequelize-mysql/)
+- [Mocha](https://mochajs.org/)
+- [Chai](https://www.chaijs.com/)
