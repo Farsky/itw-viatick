@@ -176,7 +176,7 @@ ViatickMap = (function (Mappedin, L) {
                         // Parse the content to JSON
                         const exits = JSON.parse(httpRequest.responseText);
 
-                        // Store exits in cache 
+                        // Store exits in cache
                         exits.forEach(exit => {
                             const adjacentLocationIds = exit.adjacentLocationIds.split(',');
                             cache.exits.push(new ExitEntrance(exit.exitId, exit.name, exit.x, exit.y, adjacentLocationIds));
@@ -196,7 +196,7 @@ ViatickMap = (function (Mappedin, L) {
         });
     }
 
-    function getLocations() {
+    function getLocations(locations) {
         return new Promise((resolve, reject) => {
             let httpRequest = new XMLHttpRequest();
 
@@ -204,6 +204,29 @@ ViatickMap = (function (Mappedin, L) {
                 if (httpRequest.readyState === XMLHttpRequest.DONE) {
                     if (httpRequest.status === 200) {
                         cache.zones = JSON.parse(httpRequest.responseText);
+
+                        // Necessary data to draw escape routes
+                        locations.forEach(location => {
+                            let nodeId = location.nodes.length > 0 ? location.nodes[0].node : null;
+                            let x = null,
+                                y = null;
+
+                            if (nodeId !== null) {
+                                let node = cache.nodeById[nodeId];
+                                if (node !== undefined) {
+                                    x = node.x;
+                                    y = node.y;
+                                }
+                            }
+
+                            cache.enhancedLocations.push(new Location(location.id
+                                , location.name
+                                , nodeId
+                                , nodeId !== null && cache.zones.some(zone => { return zone.locationId === location.id; })
+                                , x
+                                , y));
+                        });
+
                         resolve();
                     } else {
                         console.error(`Status code ${httpRequest.status}: ${httpRequest.responseText}`);
@@ -396,30 +419,7 @@ ViatickMap = (function (Mappedin, L) {
                         poiDiv.append(label);
                     }
 
-                    // Necessary data to draw escape routes
-                    cache.enhancedLocations = [];
-                    locations.forEach(location => {
-                        let nodeId = location.nodes.length > 0 ? location.nodes[0].node : null;
-                        let x = null,
-                            y = null;
-
-                        if (nodeId !== null) {
-                            let node = cache.nodeById[nodeId];
-                            if (node !== undefined) {
-                                x = node.x;
-                                y = node.y;
-                            }
-                        }
-
-                        cache.enhancedLocations.push(new Location(location.id
-                            , location.name
-                            , nodeId
-                            , nodeId !== null && cache.zones.some(zone => { return zone.locationId === location.id; })
-                            , x
-                            , y));
-                    });
-
-                    return cb();
+                    return cb(locations, nodes, categories);
                 }
                 );
             });
@@ -449,15 +449,7 @@ ViatickMap = (function (Mappedin, L) {
                         e.latlng,
                         leaflet.map.getMaxZoom()
                     );
-                    alert(
-                        'You clicked on the ' +
-                        this.location.name +
-                        ' marker \n' +
-                        'Located at co-ordinate ' +
-                        pos.x.toFixed(2) +
-                        ', ' +
-                        pos.y.toFixed(2)
-                    );
+                    alert('You clicked on the ' + this.location.name + ' marker \n' + 'Located at co-ordinate ' + pos.x.toFixed(2) + ', ' + pos.y.toFixed(2));
                 });
             }
         }
@@ -557,9 +549,9 @@ ViatickMap = (function (Mappedin, L) {
         // Initialize the Leaflet map and start loading the map tiles for our venue
         init(venueId, function () {
             // Building our location, nodes and category data cache
-            getModelData(function () {
+            getModelData(function (locations, nodes, categories) {
                 const getExitsPromise = getExits();
-                const getLocationsPromise = getLocations();
+                const getLocationsPromise = getLocations(locations);
                 Promise.all([getExitsPromise, getLocationsPromise]).then(() => {
                     // Init markers for floor exits and zones
                     initExitMarkers();
@@ -624,11 +616,13 @@ ViatickMap = (function (Mappedin, L) {
             });
 
             if (startLocation === undefined) {
-                console.error(`Location ${locationId} not found.`);
+                console.error(`Location '${locationName}' not found.`);
+                return;
             }
 
             if (!startLocation.hasEscapeRoute) {
-                console.error(`Location ${locationId} does not have an escape route.`);
+                console.error(`Location '${locationName}' does not have an escape route.`);
+                return;
             }
 
             // Calculate the distance from current location to all exits
@@ -699,8 +693,6 @@ ViatickMap = (function (Mappedin, L) {
                 } else {
                     location.toggleFireIndicator(!location.isOnFire());
                 }
-
-
             });
         }
     };
