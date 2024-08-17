@@ -1,12 +1,12 @@
 # Viatick Interview Test - Sands Grand Ballroom - Fire Protection System
 
-Created by: [Nguyen Vien Thien](mailto:farsky_vt@yahoo.com)
+Created by: [Farsky](mailto:farsky_vt@yahoo.com)
 
 Created date: 2021-10-24
 
 ========
 
-This documentation is intented for the interviewers of this test ([Edmund Gair](mailto:edmund@viatick.com) and [Anna Polubatko](mailto:anna@viatick.com)). The following steps will help you review this repository.
+This documentation is intented for the interviewers of this test (Edmund Gair and Anna Polubatko). The following steps will help you review this repository.
 
 ## 1. Getting Started
 - Open the terminal of your choice from the root folder (cmd/Powershell/etc)
